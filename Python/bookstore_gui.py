@@ -33,7 +33,7 @@ class BookOrderingApp:
     def add_details_window(self):
         details_window = tk.Toplevel(self.root)
         details_window.title("Add Details")
-        details_window.geometry("600x600")
+        details_window.geometry("800x800")
         details_window.configure(bg="#d4a373")
 
         tk.Label(details_window, text="Customer Name:", bg="#d4a373", fg="white").pack(pady=5)
