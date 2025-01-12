@@ -146,7 +146,7 @@ class BookOrderingApp:
     def view_invoices_window(self):
         view_invoices_window = tk.Toplevel(self.root)
         view_invoices_window.title("View All Invoices")
-        view_invoices_window.geometry("600x600")
+        view_invoices_window.geometry("700x700")
         view_invoices_window.configure(bg="#d4a373")
 
         if not self.bookstore.invoices:
