@@ -1,150 +1,104 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from bookstore_core_inher import Customer, Stock, Order, Shipping, Invoice, BookStore
-import datetime
+from tkinter import messagebox
 import csv
+import datetime
+from bookstore_core import Customer, Stock, Order, Shipping, Invoice, BookStore
 
 class BookOrderingApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Book Ordering System")
-        self.root.geometry("500x500")
-
-        self.customers = []
-        self.books = []
-        self.orders = []
+        self.root.geometry("600x600")
+        self.root.configure(bg="#d4a373")
         self.bookstore = BookStore()
+        self.orders = []
 
-        self.create_home_window()
-
-    def create_home_window(self):
-        """Create the home window with two buttons."""
-        tk.Button(self.root, text="Add Details", command=self.open_add_details_window).grid(row=0, column=0, padx=10, pady=10)
-        tk.Button(self.root, text="View All Invoices", command=self.open_view_invoices_window).grid(row=0, column=1, padx=10, pady=10)
-
-    def open_add_details_window(self):
-        """Open a new window for adding details."""
-        add_details_window = tk.Toplevel(self.root)
-        add_details_window.title("Add Details")
-        add_details_window.geometry("500x500")  # Set window size to 500x500
-        self.create_gui(add_details_window)
-
-    def open_view_invoices_window(self):
-        """Open a new window to view all invoices."""
-        view_invoices_window = tk.Toplevel(self.root)
-        view_invoices_window.title("View All Invoices")
-        view_invoices_window.geometry("500x500")  # Set window size to 500x500
-
-        if not self.bookstore.invoices:
-            tk.Label(view_invoices_window, text="No invoices found.").pack(pady=20)
-            return
-
-        invoices = "\n".join([
-            f"Invoice {inv.invoice_nbr}: {inv.customer.name} bought {inv.stock.name} - Total: £{inv.invoice():.2f}"
-            for inv in self.bookstore.invoices
-        ])
-        tk.Label(view_invoices_window, text=invoices, justify="left").pack(pady=20)
-
-    def create_gui(self, window):
-        """Create the GUI for adding details."""
-        padx, pady = 5, 5
-
-        # Customer input form
-        tk.Label(window, text="Customer Name").grid(row=0, column=0, padx=padx, pady=pady, sticky="w")
-        self.customer_name_entry = tk.Entry(window)
-        self.customer_name_entry.grid(row=0, column=1, padx=padx, pady=pady)
-
-        tk.Label(window, text="Phone Number").grid(row=1, column=0, padx=padx, pady=pady, sticky="w")
-        self.customer_phone_entry = tk.Entry(window)
-        self.customer_phone_entry.grid(row=1, column=1, padx=padx, pady=pady)
-
-        tk.Label(window, text="Email").grid(row=2, column=0, padx=padx, pady=pady, sticky="w")
-        self.customer_email_entry = tk.Entry(window)
-        self.customer_email_entry.grid(row=2, column=1, padx=padx, pady=pady)
-
-        tk.Button(window, text="Add Customer", command=self.add_customer).grid(row=3, column=1, padx=padx, pady=pady, sticky="e")
-
-        # Bookstore input form
-        tk.Label(window, text="Book Name").grid(row=4, column=0, padx=padx, pady=pady, sticky="w")
-        self.book_name_entry = tk.Entry(window)
-        self.book_name_entry.grid(row=4, column=1, padx=padx, pady=pady)
-
-        tk.Label(window, text="Author").grid(row=5, column=0, padx=padx, pady=pady, sticky="w")
-        self.book_author_entry = tk.Entry(window)
-        self.book_author_entry.grid(row=5, column=1, padx=padx, pady=pady)
-
-        tk.Label(window, text="Price").grid(row=6, column=0, padx=padx, pady=pady, sticky="w")
-        self.book_price_entry = tk.Entry(window)
-        self.book_price_entry.grid(row=6, column=1, padx=padx, pady=pady)
-
-        tk.Button(window, text="Add Book", command=self.add_book).grid(row=7, column=1, padx=padx, pady=pady, sticky="e")
-
-        # Order placement
-        tk.Label(window, text="Select Customer").grid(row=8, column=0, padx=padx, pady=pady, sticky="w")
-        self.customer_dropdown = ttk.Combobox(window)
-        self.customer_dropdown.grid(row=8, column=1, padx=padx, pady=pady)
-
-        tk.Label(window, text="Select Book").grid(row=9, column=0, padx=padx, pady=pady, sticky="w")
-        self.book_dropdown = ttk.Combobox(window)
-        self.book_dropdown.grid(row=9, column=1, padx=padx, pady=pady)
-
-        tk.Button(window, text="Place Order", command=self.place_order).grid(row=10, column=1, padx=padx, pady=pady, sticky="e")
-
-        # Shipping options
+        self.customer_var = tk.StringVar()
+        self.phone_var = tk.StringVar()
+        self.email_var = tk.StringVar()
+        self.book_name_var = tk.StringVar()
+        self.author_var = tk.StringVar()
+        self.price_var = tk.DoubleVar()
         self.urgent_shipping_var = tk.BooleanVar()
-        tk.Checkbutton(window, text="Urgent Shipping", variable=self.urgent_shipping_var).grid(row=11, column=0, padx=padx, pady=pady, sticky="w")
-        tk.Button(window, text="Calculate Shipping", command=self.calculate_shipping).grid(row=11, column=1, padx=padx, pady=pady, sticky="e")
 
-        # Generate Invoice Button
-        tk.Button(window, text="Generate Invoice", command=self.generate_invoice).grid(row=12, column=1, padx=padx, pady=pady, sticky="e")
+        self.current_customer = None
+        self.current_book = None
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        tk.Button(self.root, text="Add Details", command=self.add_details_window, bg="#fefae0", fg="black", width=20, height=2).pack(pady=20)
+        tk.Button(self.root, text="View All Invoices", command=self.view_invoices_window, bg="#fefae0", fg="black", width=20, height=2).pack(pady=20)
+
+    def add_details_window(self):
+        details_window = tk.Toplevel(self.root)
+        details_window.title("Add Details")
+        details_window.geometry("600x600")
+        details_window.configure(bg="#d4a373")
+
+        tk.Label(details_window, text="Customer Name:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.customer_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Label(details_window, text="Phone Number:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.phone_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Label(details_window, text="Email:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.email_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Button(details_window, text="Add Customer", command=self.add_customer, bg="#fefae0", fg="black").pack(pady=10)
+
+        tk.Label(details_window, text="Book Name:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.book_name_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Label(details_window, text="Author:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.author_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Label(details_window, text="Price:", bg="#d4a373", fg="white").pack(pady=5)
+        tk.Entry(details_window, textvariable=self.price_var, bg="#fefae0", fg="black", width=40).pack(pady=5)
+
+        tk.Button(details_window, text="Add Book", command=self.add_book, bg="#fefae0", fg="black").pack(pady=10)
+
+        tk.Checkbutton(details_window, text="Urgent Shipping", variable=self.urgent_shipping_var, bg="#d4a373", fg="white").pack(pady=5)
+
+        tk.Button(details_window, text="Calculate Shipping", command=self.calculate_shipping, bg="#fefae0", fg="black").pack(pady=10)
+        tk.Button(details_window, text="Place Order", command=self.place_order, bg="#fefae0", fg="black").pack(pady=10)
+        tk.Button(details_window, text="Generate Invoice", command=self.generate_invoice, bg="#fefae0", fg="black").pack(pady=10)
 
     def add_customer(self):
-        name = self.customer_name_entry.get()
-        phone = self.customer_phone_entry.get()
-        email = self.customer_email_entry.get()
-        if name and phone and email:
-            customer = Customer(name, phone, email)
-            self.customers.append(customer)
-            self.update_customer_dropdown()
-            messagebox.showinfo("Success", "Customer added successfully!")
+        customer_name = self.customer_var.get()
+        phone = self.phone_var.get()
+        email = self.email_var.get()
+
+        if customer_name and phone and email:
+            if not self.current_customer or (self.current_customer.name != customer_name or self.current_customer.phone != phone or self.current_customer.email != email):
+                self.current_customer = Customer(customer_name, phone, email)
+                messagebox.showinfo("Success", "Customer details added successfully!")
+            else:
+                messagebox.showinfo("Info", "Customer details already added!")
         else:
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "Please fill all the customer details!")
 
     def add_book(self):
-        name = self.book_name_entry.get()
-        author = self.book_author_entry.get()
-        price = self.book_price_entry.get()
-        if name and author and price:
-            try:
-                price = float(price)
-                book = Stock(name, author, price)
-                self.books.append(book)
-                self.update_book_dropdown()
-                messagebox.showinfo("Success", "Book added successfully!")
-            except ValueError:
-                messagebox.showerror("Error", "Price must be a valid number!")
+        book_name = self.book_name_var.get()
+        author = self.author_var.get()
+        price = self.price_var.get()
+
+        if book_name and author and price:
+            if not self.current_book or (self.current_book.name != book_name or self.current_book.author != author or self.current_book.price != price):
+                self.current_book = Stock(book_name, author, price)
+                messagebox.showinfo("Success", "Book details added successfully!")
+            else:
+                messagebox.showinfo("Info", "Book details already added!")
         else:
-            messagebox.showerror("Error", "All fields are required!")
-
-    def update_customer_dropdown(self):
-        self.customer_dropdown["values"] = [c.name for c in self.customers]
-
-    def update_book_dropdown(self):
-        self.book_dropdown["values"] = [b.name for b in self.books]
+            messagebox.showerror("Error", "Please fill all the book details!")
 
     def place_order(self):
-        customer_name = self.customer_dropdown.get()
-        book_name = self.book_dropdown.get()
-
-        customer = next((c for c in self.customers if c.name == customer_name), None)
-        book = next((b for b in self.books if b.name == book_name), None)
-
-        if customer and book:
-            order = Order(customer, book)
+        if self.current_customer and self.current_book:
+            order = Order(self.current_customer, self.current_book)
             self.orders.append(order)
             messagebox.showinfo("Success", "Order placed successfully!")
         else:
-            messagebox.showerror("Error", "Select both a customer and a book!")
+            messagebox.showerror("Error", "Add customer and book details first!")
 
     def calculate_shipping(self):
         if not self.orders:
@@ -170,11 +124,10 @@ class BookOrderingApp:
 
         total_cost = order.stock.price + shipping_cost
 
-        invoice = Invoice(order.customer, order.stock, shipping_cost, total_cost)
+        invoice = Invoice(f"INV{len(self.bookstore.invoices) + 1:04d}", order.customer, order.stock, shipping)
         self.bookstore.invoices.append(invoice)
 
         # Save invoice to CSV
-        print("Debug: Saving invoice to CSV")  # Debug statement
         with open("invoices.csv", "a", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow([
@@ -189,18 +142,22 @@ class BookOrderingApp:
             ])
 
         messagebox.showinfo("Success", f"Invoice generated successfully! Total: £{invoice.invoice():.2f}")
-        print("Debug: Invoice generated successfully!")  # Debug statement
 
-        print("Debug: Checking invoices...")  # Debug statement
+    def view_invoices_window(self):
+        view_invoices_window = tk.Toplevel(self.root)
+        view_invoices_window.title("View All Invoices")
+        view_invoices_window.geometry("600x600")
+        view_invoices_window.configure(bg="#d4a373")
+
         if not self.bookstore.invoices:
-            print("Debug: No invoices found.")  # Debug statement
+            tk.Label(view_invoices_window, text="No invoices found.", bg="#d4a373", fg="white").pack(pady=20)
             return
 
         invoices = "\n".join([
             f"Invoice {inv.invoice_nbr}: {inv.customer.name} bought {inv.stock.name} - Total: £{inv.invoice():.2f}"
             for inv in self.bookstore.invoices
         ])
-        tk.Label(view_invoices_window, text=invoices, justify="left").pack(pady=20)
+        tk.Label(view_invoices_window, text=invoices, justify="left", bg="#d4a373", fg="white").pack(pady=20)
 
 if __name__ == "__main__":
     root = tk.Tk()
